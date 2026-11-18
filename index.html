@@ -225,17 +225,56 @@ $('prevMonth').addEventListener('click',()=>{viewMonth=new Date(viewMonth.getFul
 $('nextMonth').addEventListener('click',()=>{viewMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()+1,1);renderCalendar()});
 $('thisMonth').addEventListener('click',()=>setSelected(new Date()));
 $('weekOverview').addEventListener('click',e=>{let b=e.target.closest('[data-weekday]');if(b)setSelected(addDays(monday(selected),Number(b.dataset.weekday)))});
-function addTask(){
- const input=$('taskInput');
- const name=input.value.trim();
- if(!name){input.focus();return;}
- const k=dateKey(selected);
- if(!Array.isArray(tasks[k]))tasks[k]=[];
- tasks[k].push({id:nextId++,name,category:$('category').value,priority:$('priority').value,done:false});
- input.value='';
- save();
- render();
- input.focus();
+async function addTask(){
+  const input = $('taskInput');
+  const name = input.value.trim();
+
+  if (!name) {
+    input.focus();
+    return;
+  }
+
+  const k = dateKey(selected);
+  const category = $('category').value;
+  const priority = $('priority').value;
+
+  if (!Array.isArray(tasks[k])) tasks[k] = [];
+
+  let task = {
+    id: nextId++,
+    name,
+    category,
+    priority,
+    done: false
+  };
+
+  if (currentUser) {
+    const { data, error } = await db
+      .from('tasks')
+      .insert({
+        user_id: currentUser.id,
+        task_date: k,
+        title: name,
+        completed: false,
+        category,
+        priority
+      })
+      .select()
+      .single();
+
+    if (error) {
+      $('authStatus').textContent = 'Cloud save failed: ' + error.message;
+    } else {
+      task.id = data.id;
+      $('authStatus').textContent = 'Task synced to the cloud! ☁️';
+    }
+  }
+
+  tasks[k].push(task);
+  input.value = '';
+  save();
+  render();
+  input.focus();
 }
 $('addTaskButton').addEventListener('click',addTask);
 $('taskForm').addEventListener('submit',e=>{
@@ -245,12 +284,54 @@ $('taskForm').addEventListener('submit',e=>{
 $('taskInput').addEventListener('keydown',e=>{
  if(e.key==='Enter'){e.preventDefault();addTask();}
 });
-$('taskList').addEventListener('click',e=>{
- let toggle=e.target.closest('[data-toggle]'),del=e.target.closest('[data-delete]'),k=dateKey(selected);
- if(toggle){let t=(tasks[k]||[]).find(x=>x.id===Number(toggle.dataset.toggle));if(t)t.done=!t.done;}
- if(del)tasks[k]=(tasks[k]||[]).filter(t=>t.id!==Number(del.dataset.delete));
- save();render();
-});
+$('taskList').addEventListener('click', async e => {
+  const toggle = e.target.closest('[data-toggle]');
+  const del = e.target.closest('[data-delete]');
+  const k = dateKey(selected);
+
+  if (toggle) {
+    const task = (tasks[k] || []).find(
+      t => String(t.id) === toggle.dataset.toggle
+    );
+
+    if (task) {
+      task.done = !task.done;
+
+      if (currentUser && typeof task.id === 'string') {
+        const { error } = await db
+          .from('tasks')
+          .update({ completed: task.done })
+          .eq('id', task.id)
+          .eq('user_id', currentUser.id);
+
+        if (error) $('authStatus').textContent = error.message;
+      }
+    }
+  }
+
+  if (del) {
+    const task = (tasks[k] || []).find(
+      t => String(t.id) === del.dataset.delete
+    );
+
+    if (task && currentUser && typeof task.id === 'string') {
+      const { error } = await db
+        .from('tasks')
+        .delete()
+        .eq('id', task.id)
+        .eq('user_id', currentUser.id);
+
+      if (error) $('authStatus').textContent = error.message;
+    }
+
+    tasks[k] = (tasks[k] || []).filter(
+      t => String(t.id) !== del.dataset.delete
+    );
+  }
+
+  save();
+  render();
+}); 
 let currentUser = null;
 async function loadCloudTasks(user) {
   $('authStatus').textContent = 'Loading your cloud tasks...';
