@@ -132,6 +132,13 @@ input,select{min-width:0;width:100%;border:1px solid #e9dfdc;border-radius:10px;
 </div>
 <script>
 (()=>{
+ const SUPABASE_URL = 'https://kbafevncsxrwexrokzlg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_39o0diC3rPtBOZXQCbwr-A_SDjzFFDh';
+
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 const names=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const reminders=[
  "You don't have to do it all today. 🍵",
