@@ -251,6 +251,81 @@ $('taskList').addEventListener('click',e=>{
  if(del)tasks[k]=(tasks[k]||[]).filter(t=>t.id!==Number(del.dataset.delete));
  save();render();
 });
+let currentUser = null;
+
+$('signUpButton').addEventListener('click', async () => {
+  const email = $('authEmail').value.trim();
+  const password = $('authPassword').value;
+
+  if (!email || password.length < 6) {
+    $('authStatus').textContent = 'Enter a valid email and a password of at least 6 characters.';
+    return;
+  }
+
+  $('authStatus').textContent = 'Creating your account...';
+
+  const { data, error } = await db.auth.signUp({
+    email,
+    password
+  });
+
+  if (error) {
+    $('authStatus').textContent = error.message;
+  } else if (data.session) {
+    currentUser = data.user;
+    $('authSignedOut').hidden = true;
+    $('authSignedIn').hidden = false;
+    $('signedInEmail').textContent = data.user.email;
+    $('authStatus').textContent = 'Account created successfully! 🌸';
+  } else {
+    $('authStatus').textContent = 'Check your email to confirm your account, then sign in. 💌';
+  }
+});
+
+$('signInButton').addEventListener('click', async () => {
+  const email = $('authEmail').value.trim();
+  const password = $('authPassword').value;
+
+  const { data, error } = await db.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    $('authStatus').textContent = error.message;
+    return;
+  }
+
+  currentUser = data.user;
+  $('authSignedOut').hidden = true;
+  $('authSignedIn').hidden = false;
+  $('signedInEmail').textContent = data.user.email;
+  $('authStatus').textContent = 'You are signed in! ☁️';
+});
+
+$('signOutButton').addEventListener('click', async () => {
+  const { error } = await db.auth.signOut();
+
+  if (error) {
+    $('authStatus').textContent = error.message;
+    return;
+  }
+
+  currentUser = null;
+  $('authSignedOut').hidden = false;
+  $('authSignedIn').hidden = true;
+  $('authStatus').textContent = 'You are signed out.';
+});
+
+db.auth.getSession().then(({ data }) => {
+  if (data.session) {
+    currentUser = data.session.user;
+    $('authSignedOut').hidden = true;
+    $('authSignedIn').hidden = false;
+    $('signedInEmail').textContent = currentUser.email;
+    $('authStatus').textContent = 'Welcome back! 🌸';
+  }
+});
 render();
 })();
 </script>
