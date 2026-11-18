@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sakura Days — Pastel Planner</title>
+<style>
+:root{--ink:#665957;--muted:#998985;--paper:#fffaf7;--line:#eee3df;--pink:#e9bac5}
+*{box-sizing:border-box}
+body{margin:0;background:#fff8f4;color:var(--ink);font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif}
+button,input,select{font:inherit}
+button{cursor:pointer;color:inherit}
+.app{max-width:1050px;margin:0 auto;padding:24px 18px 45px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.eyebrow{font-size:11px;letter-spacing:2px;color:var(--muted)}
+h1{font-size:clamp(26px,4vw,36px);margin:5px 0;color:#b77d8b}
+.subtitle{font-size:13px;color:var(--muted)}
+.mascot{font-size:48px}
+.panel{background:white;border:1px solid var(--line);border-radius:17px;padding:17px;box-shadow:0 4px 18px #876b6010}
+.top-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:15px}
+.week-summary{background:#fff0ed}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-top:14px}
+.stat strong{display:block;font-size:21px}
+.stat span{font-size:11px;color:var(--muted)}
+.progress{height:9px;background:#f2eae7;border-radius:30px;overflow:hidden}
+.progress>span{display:block;height:100%;border-radius:30px;transition:width .2s}
+.calendar-panel{margin-bottom:15px}
+.section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.section-head h2{font-size:16px;margin:0}
+.nav{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 11px;font-size:12px}
+.month-title{font-weight:700;font-size:18px;min-width:150px;text-align:center}
+.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.weekday{text-align:center;font-size:11px;color:var(--muted);padding:5px 0}
+.date-cell{border:1px solid transparent;border-radius:12px;min-height:76px;padding:8px 7px;text-align:left;position:relative;display:flex;flex-direction:column;gap:6px}
+.date-cell .num{font-size:13px;font-weight:700}
+.date-cell .dots{display:flex;gap:3px;flex-wrap:wrap}
+.dot{width:6px;height:6px;border-radius:50%;background:#c99eaa}
+.date-cell.outside{opacity:.35}
+.date-cell.selected{outline:2px solid #92767b;outline-offset:1px}
+.date-cell.today .num:after{content:" today";font-size:8px;font-weight:500;color:#a56f7c}
+.calendar-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:10px;color:var(--muted)}
+.legend-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.day-panel{margin-bottom:15px;padding:0;overflow:hidden}
+.day-banner{padding:18px;display:flex;justify-content:space-between;align-items:center}
+.day-banner h2{font-size:21px;margin:4px 0}
+.day-emoji{font-size:40px}
+.day-content{padding:16px}
+.day-progress{display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px}
+.add-form{display:grid;grid-template-columns:1fr 140px 140px auto;gap:8px;margin:12px 0 16px}
+input,select{min-width:0;width:100%;border:1px solid #e9dfdc;border-radius:10px;background:#fffaf8;padding:11px;color:var(--ink);font-size:13px}
+.add-btn{border:0;border-radius:10px;padding:10px 15px;background:#eac4cb;color:#674b53;font-weight:700;font-size:13px}
+.task{display:flex;align-items:center;gap:11px;padding:12px 4px;border-bottom:1px dashed #eee5e1}
+.task:last-child{border:0}
+.tick{width:21px;height:21px;flex-shrink:0;border:1.5px solid #cbaeb1;border-radius:6px;background:white}
+.tick.checked{background:#b9a2a6;color:white;border-color:#b9a2a6}
+.task-label{flex:1;overflow-wrap:anywhere;font-size:13px}
+.task.done .task-label{text-decoration:line-through;color:#aaa09d}
+.meta{font-size:10px;color:var(--muted);margin-top:3px}
+.delete{border:0;background:transparent;color:#b99d99;padding:5px}
+.empty{text-align:center;padding:25px 8px;color:var(--muted);font-size:13px}
+.week-overview{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.week-card{border:1px solid var(--line);border-radius:12px;padding:10px 7px;text-align:center;background:#fff}
+.week-card strong{display:block;font-size:12px}
+.week-card small{font-size:10px;color:var(--muted)}
+.week-card .mini-progress{height:5px;background:#f1e9e6;border-radius:20px;margin-top:8px;overflow:hidden}
+.week-card .mini-progress span{display:block;height:100%}
+.footer{text-align:center;color:var(--muted);font-size:11px;padding:20px}
+@media(max-width:700px){
+ .app{padding:17px 11px 35px}.top-grid{grid-template-columns:1fr}
+ .add-form{grid-template-columns:1fr 1fr}.add-form input{grid-column:1/-1}.add-btn{grid-column:1/-1}
+ .date-cell{min-height:55px;padding:6px 4px}.date-cell .num{font-size:12px}
+ .week-overview{grid-template-columns:repeat(4,1fr)}
+ .panel{padding:13px}
+}
+@media(max-width:390px){.date-cell{min-height:46px}.date-cell.today .num:after{content:""}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+ <div><div class="eyebrow">わたしの毎日 · MY LITTLE PLANNER</div><h1>Sakura Days 🌸</h1><div class="subtitle">A colourful little life, one day at a time.</div></div>
+ <div class="mascot">🐰</div>
+</header>
+
+<div class="top-grid">
+ <section class="panel week-summary">
+  <div class="eyebrow">YOUR WEEK</div><div id="weekRange" style="font-weight:700;margin-top:5px"></div>
+  <div style="display:flex;justify-content:space-between;font-size:12px;margin:16px 0 7px"><span>Weekly progress 🌱</span><strong id="weekProgressText">0 / 0 completed</strong></div>
+  <div class="progress"><span id="weekProgress" style="width:0%;background:#d4a8ad"></span></div>
+  <div class="stats"><div class="stat"><strong id="daysPlanned">0</strong><span>Days planned</span></div><div class="stat"><strong id="tasksDone">0</strong><span>Completed</span></div><div class="stat"><strong id="tasksLeft">0</strong><span>Remaining</span></div></div>
+ </section>
+ <section class="panel" style="background:#f2f6ef">
+  <div class="eyebrow">A LITTLE REMINDER</div><div id="reminderText" style="font-size:19px;margin:9px 0">You don't have to do it all today. 🍵</div>
+  <div class="subtitle">Make space for work, rest, curiosity and little joys. Every small step counts.</div>
+  <div style="font-size:25px;margin-top:12px">🌷 🐈 🌿</div>
+ </section>
+</div>
+
+<section class="panel calendar-panel">
+ <div class="section-head">
+  <div><div class="eyebrow">YOUR MONTH</div><h2 style="margin:4px 0 0">Monthly calendar 🗓️</h2></div>
+  <div style="display:flex;align-items:center;gap:7px"><button class="nav" id="prevMonth" aria-label="Previous month">←</button><div class="month-title" id="monthTitle"></div><button class="nav" id="nextMonth" aria-label="Next month">→</button><button class="nav" id="thisMonth">Today</button></div>
+ </div>
+ <div class="calendar" id="calendar"></div>
+ <div class="calendar-legend"><span><i class="legend-dot" style="background:#e6b8c3"></i>Tasks added</span><span><i class="legend-dot" style="background:#a8c6ad"></i>All tasks completed</span><span>Tap any date to plan that day</span></div>
+</section>
+
+<section class="panel day-panel">
+ <div class="day-banner" id="dayBanner" style="background:#fce9ed">
+  <div><div class="eyebrow" id="dayName">MONDAY</div><h2 id="dayTitle">A fresh start 🌷</h2><div class="subtitle" id="dayDate"></div></div><div class="day-emoji" id="dayEmoji">🌸</div>
+ </div>
+ <div class="day-content">
+  <div class="day-progress"><span>Daily progress</span><strong id="dayProgressText">0 / 0</strong></div>
+  <div class="progress"><span id="dayProgress" style="width:0%;background:#d9a4b0"></span></div>
+  <form class="add-form" id="taskForm">
+   <input id="taskInput" maxlength="120" placeholder="What would you like to do?" required>
+   <select id="category"><option>Personal</option><option>Work</option><option>Study</option><option>Wellness</option><option>Fun</option><option>Chores</option></select>
+   <select id="priority"><option>Normal</option><option>Important</option><option>Urgent</option></select>
+   <button class="add-btn" id="addTaskButton" type="button">＋ Add task</button>
+  </form>
+  <div id="taskList"></div>
+  <div class="empty" id="emptyState" hidden><div style="font-size:30px">🍡</div>A blank page awaits! Add a little task to get started.</div>
+ </div>
+</section>
+
+<section class="panel">
+ <div class="section-head"><h2>Weekly overview ✨</h2><span class="subtitle">This selected week</span></div>
+ <div class="week-overview" id="weekOverview"></div>
+</section>
+<div class="footer">🌸 Made with a little love · がんばって! · Your tasks save automatically in this browser.</div>
+</div>
+<script>
+(()=>{
+const names=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const reminders=[
+ "You don't have to do it all today. 🍵",
+ 'You are allowed to take things one step at a time. ☁️',
+ 'Your effort matters, even when progress feels small. 🌱',
+ 'You can grow at your own pace. There is no race. 🦋',
+ 'You have made it through every difficult day so far. 🌼',
+ 'Rest is productive, too. You deserve a soft day. 🧸',
+ 'You are more than your to-do list. Let yourself breathe. 🌿'
+];
+const themes=[
+ {bg:'#fce9ed',bar:'#d9a4b0',emoji:'🌸',title:'A fresh start'},
+ {bg:'#e8f0fc',bar:'#9bb7df',emoji:'☁️',title:'Take it gently'},
+ {bg:'#e8f4e9',bar:'#9bbda0',emoji:'🍃',title:'Midweek magic'},
+ {bg:'#f2eafa',bar:'#b9a1d4',emoji:'🦋',title:'Keep blooming'},
+ {bg:'#fff0df',bar:'#e3b783',emoji:'🌼',title:'Almost there'},
+ {bg:'#fff5d9',bar:'#d9c078',emoji:'🐣',title:'Slow and sunny'},
+ {bg:'#e5f2f0',bar:'#94bdb4',emoji:'🍵',title:'Rest and reset'}
+];
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,'0');
+const dateKey=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseKey=k=>{let [y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)};
+const monday=d=>{let x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-(x.getDay()+6)%7);return x};
+const addDays=(d,n)=>{let x=new Date(d);x.setDate(x.getDate()+n);return x};
+const fmt=d=>d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+const full=d=>d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let selected=new Date(),viewMonth=new Date(selected.getFullYear(),selected.getMonth(),1),nextId=1,tasks={};
+try{tasks=JSON.parse(localStorage.getItem('sakuraDaysTasks')||'{}');Object.values(tasks).flat().forEach(t=>nextId=Math.max(nextId,(t.id||0)+1));}catch(e){tasks={};}
+function save(){try{localStorage.setItem('sakuraDaysTasks',JSON.stringify(tasks));}catch(e){alert('Your browser could not save the planner. Check your browser storage settings.');}}
+function listFor(d){return tasks[dateKey(d)]||[]}
+function setSelected(d){selected=new Date(d.getFullYear(),d.getMonth(),d.getDate());viewMonth=new Date(selected.getFullYear(),selected.getMonth(),1);render()}
+function renderCalendar(){
+ $('monthTitle').textContent=viewMonth.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+ let first=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),1);
+ let start=monday(first);
+ let html=names.map(n=>`<div class="weekday">${n.slice(0,3)}</div>`).join('');
+ for(let i=0;i<42;i++){
+  let d=addDays(start,i),key=dateKey(d),list=listFor(d),done=list.length&&list.every(t=>t.done);
+  let weekday=(d.getDay()+6)%7,theme=themes[weekday];
+  let cls='date-cell'+(d.getMonth()!==viewMonth.getMonth()?' outside':'')+(key===dateKey(selected)?' selected':'')+(key===dateKey(new Date())?' today':'');
+  html+=`<button class="${cls}" data-date="${key}" style="background:${theme.bg}"><span class="num">${d.getDate()}</span><span class="dots">${list.length?`<i class="dot" style="background:${done?'#91b79b':'#c99eaa'}"></i>`:''}${list.length>1?`<i class="dot" style="background:${theme.bar}"></i>`:''}</span></button>`;
+ }
+ $('calendar').innerHTML=html;
+}
+function renderDay(){
+ let weekday=(selected.getDay()+6)%7,theme=themes[weekday],list=listFor(selected),done=list.filter(t=>t.done).length;
+ $('dayBanner').style.background=theme.bg;$('reminderText').textContent=reminders[weekday];$('dayName').textContent=names[weekday].toUpperCase();$('dayTitle').textContent=theme.title+' ♡';$('dayDate').textContent=full(selected);$('dayEmoji').textContent=theme.emoji;
+ $('dayProgressText').textContent=`${done} / ${list.length}`;$('dayProgress').style.width=(list.length?done/list.length*100:0)+'%';$('dayProgress').style.background=theme.bar;
+ $('taskList').innerHTML=list.map(t=>`<div class="task ${t.done?'done':''}"><button class="tick ${t.done?'checked':''}" data-toggle="${t.id}" aria-label="Toggle task">${t.done?'✓':''}</button><div class="task-label"><div>${escapeHTML(t.name)}</div><div class="meta">${escapeHTML(t.category)} · ${escapeHTML(t.priority)}</div></div><button class="delete" data-delete="${t.id}" aria-label="Delete task">✕</button></div>`).join('');
+ $('emptyState').hidden=!!list.length;
+}
+function renderWeek(){
+ let start=monday(selected),all=[],planned=0;
+ for(let i=0;i<7;i++){let d=addDays(start,i),a=listFor(d);all.push(...a);if(a.length)planned++;}
+ let done=all.filter(t=>t.done).length;
+ $('weekRange').textContent=fmt(start)+' – '+fmt(addDays(start,6))+', '+start.getFullYear();
+ $('weekProgressText').textContent=`${done} / ${all.length} completed`;
+ $('weekProgress').style.width=(all.length?done/all.length*100:0)+'%';
+ $('daysPlanned').textContent=planned;$('tasksDone').textContent=done;$('tasksLeft').textContent=all.length-done;
+ $('weekOverview').innerHTML=names.map((n,i)=>{let d=addDays(start,i),a=listFor(d),c=a.filter(t=>t.done).length;return `<button class="week-card" data-weekday="${i}" style="background:${themes[i].bg}"><strong>${n.slice(0,3)} ${d.getDate()}</strong><small>${c}/${a.length} done</small><div class="mini-progress"><span style="width:${a.length?c/a.length*100:0}%;background:${themes[i].bar}"></span></div></button>`}).join('');
+}
+function render(){renderCalendar();renderDay();renderWeek()}
+$('calendar').addEventListener('click',e=>{let b=e.target.closest('[data-date]');if(b)setSelected(parseKey(b.dataset.date));});
+$('prevMonth').addEventListener('click',()=>{viewMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()-1,1);renderCalendar()});
+$('nextMonth').addEventListener('click',()=>{viewMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()+1,1);renderCalendar()});
+$('thisMonth').addEventListener('click',()=>setSelected(new Date()));
+$('weekOverview').addEventListener('click',e=>{let b=e.target.closest('[data-weekday]');if(b)setSelected(addDays(monday(selected),Number(b.dataset.weekday)))});
+function addTask(){
+ const input=$('taskInput');
+ const name=input.value.trim();
+ if(!name){input.focus();return;}
+ const k=dateKey(selected);
+ if(!Array.isArray(tasks[k]))tasks[k]=[];
+ tasks[k].push({id:nextId++,name,category:$('category').value,priority:$('priority').value,done:false});
+ input.value='';
+ save();
+ render();
+ input.focus();
+}
+$('addTaskButton').addEventListener('click',addTask);
+$('taskForm').addEventListener('submit',e=>{
+ e.preventDefault();
+ addTask();
+});
+$('taskInput').addEventListener('keydown',e=>{
+ if(e.key==='Enter'){e.preventDefault();addTask();}
+});
+$('taskList').addEventListener('click',e=>{
+ let toggle=e.target.closest('[data-toggle]'),del=e.target.closest('[data-delete]'),k=dateKey(selected);
+ if(toggle){let t=(tasks[k]||[]).find(x=>x.id===Number(toggle.dataset.toggle));if(t)t.done=!t.done;}
+ if(del)tasks[k]=(tasks[k]||[]).filter(t=>t.id!==Number(del.dataset.delete));
+ save();render();
+});
+render();
+})();
+</script>
+</body>
+</html>
