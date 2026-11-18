@@ -252,7 +252,72 @@ $('taskList').addEventListener('click',e=>{
  save();render();
 });
 let currentUser = null;
+async function loadCloudTasks(user) {
+  $('authStatus').textContent = 'Loading your cloud tasks...';
 
+  const { data: rows, error } = await db
+    .from('tasks')
+    .select('*')
+    .eq('user_id', user.id);
+
+  if (error) {
+    $('authStatus').textContent = 'Could not load tasks: ' + error.message;
+    return;
+  }
+
+  // If the cloud is empty, copy existing browser tasks to it.
+  if (rows.length === 0) {
+    const localTasks = Object.entries(tasks).flatMap(([task_date, items]) =>
+      items.map(task => ({
+        user_id: user.id,
+        task_date,
+        title: task.name,
+        completed: !!task.done,
+        category: task.category || 'Personal',
+        priority: task.priority || 'Normal'
+      }))
+    );
+
+    if (localTasks.length > 0) {
+      const { error: uploadError } = await db
+        .from('tasks')
+        .insert(localTasks);
+
+      if (uploadError) {
+        $('authStatus').textContent = 'Could not upload existing tasks: ' + uploadError.message;
+        return;
+      }
+    }
+  }
+
+  const { data: cloudRows, error: fetchError } = await db
+    .from('tasks')
+    .select('*')
+    .eq('user_id', user.id);
+
+  if (fetchError) {
+    $('authStatus').textContent = 'Could not refresh tasks: ' + fetchError.message;
+    return;
+  }
+
+  tasks = {};
+
+  cloudRows.forEach(task => {
+    if (!tasks[task.task_date]) tasks[task.task_date] = [];
+
+    tasks[task.task_date].push({
+      id: task.id,
+      name: task.title,
+      done: task.completed,
+      category: task.category,
+      priority: task.priority
+    });
+  });
+
+  save();
+  render();
+  $('authStatus').textContent = 'Your tasks are synced to the cloud! ☁️';
+}
 $('signUpButton').addEventListener('click', async () => {
   const email = $('authEmail').value.trim();
   const password = $('authPassword').value;
@@ -273,6 +338,7 @@ $('signUpButton').addEventListener('click', async () => {
     $('authStatus').textContent = error.message;
   } else if (data.session) {
     currentUser = data.user;
+   await loadCloudTasks(currentUser);
     $('authSignedOut').hidden = true;
     $('authSignedIn').hidden = false;
     $('signedInEmail').textContent = data.user.email;
@@ -297,6 +363,7 @@ $('signInButton').addEventListener('click', async () => {
   }
 
   currentUser = data.user;
+ await loadCloudTasks(currentUser);
   $('authSignedOut').hidden = true;
   $('authSignedIn').hidden = false;
   $('signedInEmail').textContent = data.user.email;
@@ -320,6 +387,7 @@ $('signOutButton').addEventListener('click', async () => {
 db.auth.getSession().then(({ data }) => {
   if (data.session) {
     currentUser = data.session.user;
+    loadCloudTasks(currentUser);
     $('authSignedOut').hidden = true;
     $('authSignedIn').hidden = false;
     $('signedInEmail').textContent = currentUser.email;
